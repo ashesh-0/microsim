@@ -1,17 +1,16 @@
-from concurrent.futures import ThreadPoolExecutor
+import argparse
 from pathlib import Path
 
 import tifffile as tf
 
 from microsim import schema as ms
-from microsim.cosem import CosemDataset
 
 EGFP = ms.Fluorophore.from_fpbase("EGFP")
 VENUS = ms.Fluorophore.from_fpbase("Venus")
-RATIO = 1.5
+# RATIO = 1.5
 
 
-def run_simulation(dset: str) -> None:
+def run_simulation(dset: str, ratio: float, outputdir: str | None = None) -> None:
     print("Running simulation for", dset)
     try:
         sim = ms.Simulation(
@@ -19,7 +18,7 @@ def run_simulation(dset: str) -> None:
             # scale should be a one of .004 * 2^n, where n is an integer from 0 to 4
             # space basically determines the field of view.
             truth_space=ms.ShapeScaleSpace(
-                shape=(96, 1400, 1400), scale=(0.032, 0.032, 0.032)
+                shape=(96, 1400, 1400), scale=(0.004, 0.004, 0.004)
             ),
             output_space={"downscale": 4},
             sample=[
@@ -31,7 +30,7 @@ def run_simulation(dset: str) -> None:
                 ms.FluorophoreDistribution(
                     distribution=ms.CosemLabel(dataset=dset, label="mito-mem_pred"),
                     fluorophore=VENUS,
-                    concentration=RATIO,
+                    concentration=ratio,
                 ),
             ],
             channels=["i6WL::Widefield Dual Green", "i6WL::Widefield Triple Yellow"],
@@ -45,25 +44,31 @@ def run_simulation(dset: str) -> None:
         print("❌ FAILED", dset, str(e))
         return
 
-    dest = Path("egfp_er_venus_mito") / dset
+    dest = Path(outputdir) / dset
     dest.mkdir(parents=True, exist_ok=True)
 
     oipf = sim.optical_image_per_fluor()
     with_bleed = sim.digital_image(oipf.sum("f"))
     tf.imwrite(
-        dest / f"{dset}_bleedthrough_{RATIO}.tif",
+        dest / f"{dset}_bleedthrough_{ratio}.tif",
         with_bleed.transpose("z", "c", "y", "x"),
         imagej=True,
     )
     just_egfp = sim.digital_image(oipf.sel(f=EGFP))
-    tf.imwrite(dest / f"{dset}_just_egfp_{RATIO}.tif", just_egfp.isel(c=0), imagej=True)
+    tf.imwrite(dest / f"{dset}_just_egfp_{ratio}.tif", just_egfp.isel(c=0), imagej=True)
     just_venus = sim.digital_image(oipf.sel(f=VENUS))
     tf.imwrite(
-        dest / f"{dset}_just_venus_{RATIO}.tif", just_venus.isel(c=1), imagej=True
+        dest / f"{dset}_just_venus_{ratio}.tif", just_venus.isel(c=1), imagej=True
     )
 
 
 if __name__ == "__main__":
-    dsets = CosemDataset.names()
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        list(pool.map(run_simulation, dsets))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dset", type=str, default="jrc_hela-3")
+    parser.add_argument("--ratio", type=float, default=1.5)
+    parser.add_argument("--outputdir", type=str, default="egfp_er_venus_mito")
+    args = parser.parse_args()
+    # dsets = CosemDataset.names()
+    run_simulation(args.dset, args.ratio, outputdir=args.outputdir)
+    # with ThreadPoolExecutor(max_workers=2) as pool:
+    #     list(pool.map(run_simulation, dsets))
