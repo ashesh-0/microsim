@@ -18,8 +18,8 @@ def run_simulation(dset: str, outputdir: str | None = None,
                    fluorophore2_str:str='Venus',
                    label1:str='er-mem_pred',
                      label2:str='mito-mem_pred',
-                    concentraion1:float=1.0,
-                    concentraion2:float=1.0,
+                    concentration1:float=1.0,
+                    concentration2:float=1.0,
                    scale_factor:int=1,
                    shape_factor:float=1.0,
                    downscale:int=4,
@@ -43,12 +43,12 @@ def run_simulation(dset: str, outputdir: str | None = None,
                 ms.FluorophoreDistribution(
                     distribution=ms.CosemLabel(dataset=dset, label=label1),
                     fluorophore=flf1,
-                    concentration=concentraion1
+                    concentration=concentration1
                 ),
                 ms.FluorophoreDistribution(
                     distribution=ms.CosemLabel(dataset=dset, label=label2),
                     fluorophore=flf2,
-                    concentration=concentraion2,
+                    concentration=concentration2,
                 ),
             ],
             channels=["i6WL::Widefield Dual Green", "i6WL::Widefield Triple Yellow"],
@@ -68,23 +68,32 @@ def run_simulation(dset: str, outputdir: str | None = None,
         dest = Path(outputdir) / dset
         dest.mkdir(parents=True, exist_ok=True)
         write_to_files(with_BT_data=with_bleed, ch1_data=ch1, ch2_data=ch2, dest=dest, dset=dset, 
-                       ratio=ratio, scale_factor=scale_factor, downscale=downscale, fluor1_str=fluorophore1_str, 
+                       concentration1=concentration1, concentration2=concentration2, 
+                       scale_factor=scale_factor, downscale=downscale, fluor1_str=fluorophore1_str, 
                        fluor2_str=fluorophore2_str, exposure_ms=exposure_ms)
         # write_to_files(dest, dset, ratio, fluorophore1_str, fluorophore2_str, with_bleed, ch1, ch2)
     
     return dest, with_bleed, ch1, ch2
 
-def fnames(dset:str, ratio:float, scale_factor:int, downscale:int, fluor1_str:str, fluor2_str:str, exposure_ms:float):
-    postfix = f"{fluor1_str}_{fluor2_str}_R{ratio}_S{scale_factor}_D{downscale}_Ex{exposure_ms}ms"
+def fnames(dset:str, concentration1:float,concentration2:float, 
+           scale_factor:int, downscale:int, fluor1_str:str, fluor2_str:str, exposure_ms:float):
+    """
+    R3.0_S4_D1_Ex100.0ms
+    """
+    postfix = f"{fluor1_str}_{fluor2_str}_R{concentration1}-{concentration2}_S{scale_factor}_D{downscale}_Ex{exposure_ms}ms"
     inp = f"{dset}_bleedthrough_{postfix}.tif"
     ch1 = f"{dset}_ch1_{postfix}.tif"
     ch2 = f"{dset}_ch2_{postfix}.tif"
     return inp, ch1, ch2
 
-def write_to_files(with_BT_data, ch1_data, ch2_data, dest:Path, dset:str, ratio:float, scale_factor, downscale:int, fluor1_str:str, fluor2_str:str,
+def write_to_files(with_BT_data, ch1_data, ch2_data, dest:Path, dset:str, 
+                   concentration1:float,
+                   concentration2:float,
+                    scale_factor, downscale:int, fluor1_str:str, fluor2_str:str,
                    exposure_ms:float):
     inp_fname, ch1_fname, ch2_fname = fnames(dset=dset, 
-                                             ratio=ratio, 
+                                             concentration1=concentration1,
+                                                concentration2=concentration2, 
                                              scale_factor=scale_factor, 
                                              downscale=downscale, 
                                              fluor1_str=fluor1_str, 
@@ -100,6 +109,7 @@ def write_to_files(with_BT_data, ch1_data, ch2_data, dest:Path, dset:str, ratio:
     tf.imwrite(
         dest / ch2_fname, ch2_data.isel(c=1), imagej=True
     )
+
 
 
 if __name__ == "__main__":
@@ -121,7 +131,7 @@ if __name__ == "__main__":
     # dsets = CosemDataset.names()
     run_simulation(args.dset, outputdir=args.outputdir,
                    label1=args.label1, label2=args.label2,
-                   concentraion1=args.concentration1, concentraion2=args.concentration2,
+                   concentration1=args.concentration1, concentration2=args.concentration2,
                    fluorophore1_str=args.fluor1, fluorophore2_str=args.fluor2,
                    scale_factor=args.scale_factor, downscale=args.downscale,
                    exposure_ms=args.exposure_ms,
