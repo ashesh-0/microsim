@@ -12,10 +12,14 @@ class SplittingDataMode:
 # RATIO = 1.5
 
 
-def run_simulation(dset: str, ratio: float, outputdir: str | None = None, 
+def run_simulation(dset: str, outputdir: str | None = None, 
                    splitting_mode:SplittingDataMode = SplittingDataMode.MultiChannel,
                    fluorophore1_str:str='EGFP',
                    fluorophore2_str:str='Venus',
+                   label1:str='er-mem_pred',
+                     label2:str='mito-mem_pred',
+                    concentraion1:float=1.0,
+                    concentraion2:float=1.0,
                    scale_factor:int=1,
                    shape_factor:float=1.0,
                    downscale:int=4,
@@ -37,13 +41,14 @@ def run_simulation(dset: str, ratio: float, outputdir: str | None = None,
             sample=[
                 # pick dataset and layer name from https://openorganelle.janelia.org/datasets
                 ms.FluorophoreDistribution(
-                    distribution=ms.CosemLabel(dataset=dset, label="er-mem_pred"),
+                    distribution=ms.CosemLabel(dataset=dset, label=label1),
                     fluorophore=flf1,
+                    concentration=concentraion1
                 ),
                 ms.FluorophoreDistribution(
-                    distribution=ms.CosemLabel(dataset=dset, label="mito-mem_pred"),
+                    distribution=ms.CosemLabel(dataset=dset, label=label2),
                     fluorophore=flf2,
-                    concentration=ratio,
+                    concentration=concentraion2,
                 ),
             ],
             channels=["i6WL::Widefield Dual Green", "i6WL::Widefield Triple Yellow"],
@@ -100,6 +105,10 @@ def write_to_files(with_BT_data, ch1_data, ch2_data, dest:Path, dset:str, ratio:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dset", type=str, default="jrc_hela-3")
+    parser.add_argument("--label1", type=str, default="er-mem_pred")
+    parser.add_argument("--label2", type=str, default="mito-mem_pred")
+    parser.add_argument("--concentration1", type=float, default=1.0)
+    parser.add_argument("--concentration2", type=float, default=1.0)
     parser.add_argument("--ratio", type=float, default=1.5, help="Relative concentration of fluorophore 2 to fluorophore 1")
     parser.add_argument("--fluor1", type=str, default="EGFP")
     parser.add_argument("--fluor2", type=str, default="Venus")
@@ -110,7 +119,9 @@ if __name__ == "__main__":
     parser.add_argument("--exposure_ms", type=float, default=0.5)
     args = parser.parse_args()
     # dsets = CosemDataset.names()
-    run_simulation(args.dset, args.ratio, outputdir=args.outputdir,
+    run_simulation(args.dset, outputdir=args.outputdir,
+                   label1=args.label1, label2=args.label2,
+                   concentraion1=args.concentration1, concentraion2=args.concentration2,
                    fluorophore1_str=args.fluor1, fluorophore2_str=args.fluor2,
                    scale_factor=args.scale_factor, downscale=args.downscale,
                    exposure_ms=args.exposure_ms,
