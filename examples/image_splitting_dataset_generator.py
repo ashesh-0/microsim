@@ -34,9 +34,13 @@ def run_simulation(dset: str, outputdir: str | None = None,
             # note: this is a rather coarse simulation, but it's fast
             # scale should be a one of .004 * 2^n, where n is an integer from 0 to 4
             # space basically determines the field of view.
+            # truth_space=ms.ShapeScaleSpace(
+            #     shape=(96, int(shape_factor*1400), int(shape_factor*1400)), scale=(0.004*scale_factor, 0.004*scale_factor, 0.004*scale_factor)
+            # ),
             truth_space=ms.ShapeScaleSpace(
-                shape=(96, int(shape_factor*1400), int(shape_factor*1400)), scale=(0.004*scale_factor, 0.004*scale_factor, 0.004*scale_factor)
+                shape=(96, 3720, 1800), scale=(0.004*scale_factor, 0.004*scale_factor, 0.004*scale_factor)
             ),
+
             output_space={"downscale": downscale},
             sample=[
                 # pick dataset and layer name from https://openorganelle.janelia.org/datasets
@@ -70,17 +74,19 @@ def run_simulation(dset: str, outputdir: str | None = None,
         write_to_files(with_BT_data=with_bleed, ch1_data=ch1, ch2_data=ch2, dest=dest, dset=dset, 
                        concentration1=concentration1, concentration2=concentration2, 
                        scale_factor=scale_factor, downscale=downscale, fluor1_str=fluorophore1_str, 
-                       fluor2_str=fluorophore2_str, exposure_ms=exposure_ms)
+                       fluor2_str=fluorophore2_str, exposure_ms=exposure_ms,
+                       label1=label1, label2=label2,)
         # write_to_files(dest, dset, ratio, fluorophore1_str, fluorophore2_str, with_bleed, ch1, ch2)
     
     return dest, with_bleed, ch1, ch2
 
 def fnames(dset:str, concentration1:float,concentration2:float, 
-           scale_factor:int, downscale:int, fluor1_str:str, fluor2_str:str, exposure_ms:float):
+           scale_factor:int, downscale:int, fluor1_str:str, fluor2_str:str, exposure_ms:float,
+           label1:str='', label2:str='',):
     """
     R3.0_S4_D1_Ex100.0ms
     """
-    postfix = f"{fluor1_str}_{fluor2_str}_R{concentration1}-{concentration2}_S{scale_factor}_D{downscale}_Ex{exposure_ms}ms"
+    postfix = f"{label1}_{label2}_{fluor1_str}_{fluor2_str}_R{concentration1}-{concentration2}_S{scale_factor}_D{downscale}_Ex{exposure_ms}ms"
     inp = f"{dset}_bleedthrough_{postfix}.tif"
     ch1 = f"{dset}_ch1_{postfix}.tif"
     ch2 = f"{dset}_ch2_{postfix}.tif"
@@ -90,7 +96,8 @@ def write_to_files(with_BT_data, ch1_data, ch2_data, dest:Path, dset:str,
                    concentration1:float,
                    concentration2:float,
                     scale_factor, downscale:int, fluor1_str:str, fluor2_str:str,
-                   exposure_ms:float):
+                   exposure_ms:float,
+                   label1:str='', label2:str='',):
     inp_fname, ch1_fname, ch2_fname = fnames(dset=dset, 
                                              concentration1=concentration1,
                                                 concentration2=concentration2, 
@@ -98,7 +105,8 @@ def write_to_files(with_BT_data, ch1_data, ch2_data, dest:Path, dset:str,
                                              downscale=downscale, 
                                              fluor1_str=fluor1_str, 
                                              fluor2_str=fluor2_str,
-                                             exposure_ms=exposure_ms)
+                                             exposure_ms=exposure_ms,
+                                             label1=label1, label2=label2)
     tf.imwrite(
         dest / inp_fname,
         with_BT_data.transpose("z", "c", "y", "x"),
